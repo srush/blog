@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="{{ DEFAULT_LANG }}">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>{% block title %}{{ SITENAME }}{% endblock title %}</title>
+
+    <!-- Meta -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Social -->
+    {% if article %}
+    <meta property="article:author" content="{{ article.author }}" />
+    <meta property="article:section" content="{{ article.category }}" />
+    <meta property="article:published_time" content="{{ article.date.strftime("%Y-%m-%d") }}" />
+
+    <meta property="og:type" content="article"/>
+    <meta property="og:title" content="{{ article.title|striptags }}"/>
+    <meta property="og:description" content="{{ article.summary|striptags|escape }}"/>
+    <meta property="og:site_name" content="{{ SITENAME }}" />
+    <meta property="og:url" content="{{ SITEURL }}/{{ article.url }}"/>
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ article.title|striptags }}">
+    <meta name="twitter:description" content="{{ article.summary|striptags|escape }}">
+    <meta name="twitter:url" content="{{ SITEURL }}/{{ article.url }}">
+    {% elif page %}
+    <meta property="og:type" content="article"/>
+    <meta property="og:title" content="{{ page.title }}"/>
+    <meta property="og:description" content="{{ SITESUBTITLE }}"/>
+    <meta property="og:site_name" content="{{ SITENAME }}" />
+    <meta property="og:url" content="{{ SITEURL }}/{{ page.url }}"/>
+    <meta property="og:image" content="{{ AUTHOR_AVATAR }}"/>
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ page.title }}">
+    <meta name="twitter:description" content="{{ SITESUBTITLE }}">
+    <meta name="twitter:url" content="{{ SITEURL }}/{{ page.url }}">
+    <meta name="twitter:image" content="{{ AUTHOR_AVATAR }}">
+    {% else %}
+    <meta property="og:type" content="website"/>
+    <meta property="og:title" content="{{ SITENAME }}"/>
+    <meta property="og:description" content="{{ SITESUBTITLE }}"/>
+    <meta property="og:site_name" content="{{ SITENAME }}" />
+    <meta property="og:url" content="{{ SITEURL }}"/>
+    <meta property="og:image" content="{{ AUTHOR_AVATAR }}"/>
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ SITENAME }}">
+    <meta name="twitter:description" content="{{ SITESUBTITLE }}">
+    <meta name="twitter:url" content="{{ SITEURL }}">
+    <meta name="twitter:image" content="{{ AUTHOR_AVATAR }}">
+    {% endif %}
+
+    <!-- Feed -->
+    {% if FEED_ALL_ATOM %}
+    <link rel="alternate" type="application/atom+xml" href="{{ FEED_DOMAIN }}/{{ FEED_ALL_ATOM }}" title="{{ SITENAME }} Atom Feed" />
+    {% endif %}
+    {% if FEED_ALL_RSS %}
+    <link rel="alternate" type="application/rss+xml" href="{{ FEED_DOMAIN }}/{{ FEED_ALL_RSS }}" title="{{ SITENAME }} RSS Feed" />
+    {% endif %}
+    {% if FEED_ATOM %}
+    <link rel="alternate" type="application/atom+xml" href="{{ FEED_DOMAIN }}/{{ FEED_ATOM }}" title="{{ SITENAME }} Atom Feed" />
+    {% endif %}
+    {% if FEED_RSS %}
+    <link rel="alternate" type="application/rss+xml" href="{{ FEED_DOMAIN }}/{{ FEED_RSS }}" title="{{ SITENAME }} RSS Feed" />
+    {% endif %}
+    {% if CATEGORY_FEED_ATOM and category %}
+    <link rel="alternate" type="application/atom+xml" href="{{ FEED_DOMAIN }}/{{ CATEGORY_FEED_ATOM|format(category.slug) }}" title="{{ SITENAME }} Categories Atom Feed" />
+    {% endif %}
+    {% if CATEGORY_FEED_RSS and category %}
+    <link rel="alternate" type="application/rss+xml" href="{{ FEED_DOMAIN }}/{{ CATEGORY_FEED_RSS|format(category.slug) }}" title="{{ SITENAME }} Categories RSS Feed" />
+    {% endif %}
+    {% if TAG_FEED_ATOM and tag %}
+    <link rel="alternate" type="application/atom+xml" href="{{ FEED_DOMAIN }}/{{ TAG_FEED_ATOM|format(tag.slug) }}" title="{{ SITENAME }} Tags Atom Feed" />
+    {% endif %}
+    {% if TAG_FEED_RSS and tag %}
+    <link rel="alternate" type="application/rss+xml" href="{{ FEED_DOMAIN }}/{{ TAG_FEED_RSS|format(tag.slug) }}" title="{{ SITENAME }} Tags RSS Feed" />
+    {% endif %}
+    {% if DISQUS_SITENAME %}
+    <link rel="alternate" type="application/rss+xml" href="https://{{ DISQUS_SITENAME }}.disqus.com/latest.rss" title="{{ SITENAME }} Comments RSS Feed">
+    {% endif %}
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/javascript" async
+  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+  <script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+  tex2jax: {
+  inlineMath: [['$','$'], ['\\(','\\)']],
+  processEscapes: true
+  }
+  });
+  </script>
+    {% if True %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+    <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js"></script>
+
+    <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js" onload="// Copyright 2019 Google LLC
+//
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file or at
+// https://developers.google.com/open-source/licenses/bsd
+
+var katexOptions = {
+    delimiters: [
+        {left: &quot;$$&quot;, right: &quot;$$&quot;, display: true},
+        {left: &quot;\\[&quot;, right: &quot;\\]&quot;, display: true},
+        {left: &quot;$&quot;, right: &quot;$&quot;, display: false},
+        {left: &quot;\\(&quot;, right: &quot;\\)&quot;, display: false}
+    ],
+    // Enable commands that load resources or change HTML attributes
+    // (e.g. hyperlinks): https://katex.org/docs/security.html.
+    trust: true
+};
+
+var cells = {};
+
+function append_contents(key, contents) {
+    if (key in cells) {
+        var cur_cells = cells[key];
+    } else {
+        var cell = document.createElement(&quot;div&quot;);
+        cell.className = &quot;cell&quot;;
+        cells[key] = [cell];
+        var cur_cells = [cell];
+    }
+    for (var i = 0; i &lt; contents.length; i++) {
+        for (var j = 0; j &lt; cur_cells.length; j++) {
+            var node = lookup_address(cur_cells[j], contents[i][0])
+            node.innerHTML += contents[i][1];
+        }
+    }
+}
+
+function lookup_address(cell, address) {
+    var node = cell
+    for (i = 0; i &lt; address.length; i++) {
+        node = node.children[address[i]]
+    }
+    return node
+}
+
+function renderLaTeX() {
+    // Render LaTeX equations in prose blocks via KaTeX.
+    var proseBlocks = document.querySelectorAll(&quot;.prose-block&quot;);
+    Array.from(proseBlocks).map((proseBlock) =&gt;
+        renderMathInElement(proseBlock, katexOptions)
+    );
+}
+
+/**
+ * Rendering the Table of Contents / Navigation Bar
+ * 2 key functions
+ *  - `updateNavigation()` which inserts/updates the navigation bar
+ *  - and it&#39;s helper `extractStructure()` which extracts the structure of the page
+ *    and adds ids to heading elements.
+*/
+function updateNavigation() {
+    function navItemList(struct) {
+        var listEle = document.createElement(&#39;ol&#39;)
+        struct.children.forEach(childStruct=&gt;
+            listEle.appendChild(navItem(childStruct))
+        );
+        return listEle;
+    }
+    function navItem(struct) {
+        var a = document.createElement(&#39;a&#39;);
+        a.appendChild(document.createTextNode(struct.text));
+        a.title = struct.text;
+        a.href = &quot;#&quot;+struct.id;
+
+        var ele = document.createElement(&#39;li&#39;)
+        ele.appendChild(a)
+        ele.appendChild(navItemList(struct));
+        return ele;
+    }
+
+    var navbarEle = document.getElementById(&quot;navbar&quot;)
+    if (navbarEle === null) {  // create it
+        navbarEle = document.createElement(&quot;div&quot;);
+        navbarEle.id=&quot;navbar&quot;;
+        navOuterEle = document.createElement(&quot;nav&quot;)
+        navOuterEle.appendChild(navbarEle);
+        document.body.prepend(navOuterEle);
+    }
+
+    navbarEle.innerHTML = &quot;&quot;
+    var structure = extractStructure()
+    navbarEle.appendChild(navItemList(structure));
+}
+
+function extractStructure() { // Also sets ids on h1,h2,...
+    var headingsNodes = document.querySelectorAll(&quot;h1, h2, h3, h4, h5, h6&quot;);
+    // For now we are just fulling going to regenerate the structure each time
+    // Might be better if we made minimal changes, but ð¤·
+
+    // Extract the structure of the document
+    var structure = {children:[]}
+    var active = [structure.children];
+    headingsNodes.forEach(
+        function(currentValue, currentIndex) {
+            currentValue.id = &quot;s-&quot; + currentIndex;
+            var currentLevel = parseInt(currentValue.nodeName[1]);
+
+            // Insert dummy levels up for any levels that are skipped
+            for (var i=active.length; i &lt; currentLevel; i++) {
+                var dummy = {id: &quot;&quot;, text: &quot;&quot;, children: []}
+                active.push(dummy.children);
+                var parentList = active[i-1]
+                parentList.push(dummy);
+            }
+            // delete this level and everything after
+            active.splice(currentLevel, active.length);
+
+            var currentStructure = {
+                id: currentValue.id,
+                text: currentValue.textContent,
+                children: [],
+            };
+            active.push(currentStructure.children);
+
+            var parentList = active[active.length-2]
+            parentList.push(currentStructure);
+        },
+    );
+    return structure;
+}
+
+/**
+ * HTML rendering mode.
+ * Static rendering is used for static HTML pages.
+ * Dynamic rendering is used for dynamic HTML pages via `dex web`.
+ *
+ * @enum {string}
+ */
+var RENDER_MODE = Object.freeze({
+  STATIC: &quot;static&quot;,
+  DYNAMIC: &quot;dynamic&quot;,
+})
+
+/**
+ * Renders the webpage.
+ * @param {RENDER_MODE} renderMode The render mode, either static or dynamic.
+ */
+function render(renderMode) {
+    if (renderMode == RENDER_MODE.STATIC) {
+        // For static pages, simply call rendering functions once.
+        renderLaTeX();
+        updateNavigation();
+    } else {
+        // For dynamic pages (via `dex web`), listen to update events.
+        var source = new EventSource(&quot;/getnext&quot;);
+        source.onmessage = function(event) {
+            var body = document.getElementById(&quot;main-output&quot;);
+            var msg = JSON.parse(event.data);
+            if (msg == &quot;start&quot;) {
+                body.innerHTML = &quot;&quot;;
+                cells = {}
+                return
+            }
+            var order    = msg[0];
+            var contents = msg[1];
+            for (var i = 0; i &lt; contents.length; i++) {
+                append_contents(contents[i][0], contents[i][1]);
+            }
+            if (order != null) {
+                var new_cells = {};
+                body.innerHTML = &quot;&quot;;
+                for (var i = 0; i &lt; order.val.length; i++) {
+                    var key = order.val[i]
+                    var cur_cells = cells[key]
+                    if (cur_cells.length == 0) {
+                        var cur_cell = new_cells[key][0].cloneNode(true)
+                    } else {
+                        var cur_cell = cur_cells.pop()
+                        if (key in new_cells) {
+                            new_cells[key].push(cur_cell);
+                        } else {
+                            new_cells[key] = [cur_cell];
+                        }
+                    }
+                    body.appendChild(cur_cell);
+                }
+                Object.assign(cells, new_cells);
+            }
+            renderLaTeX();
+            updateNavigation();
+        };
+    }
+}
+render(RENDER_MODE.STATIC);"></script>
+    {% endif %}
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:regular,bold">
+    <link rel="stylesheet" type="text/css" href="{{ SITEURL }}/theme/css/w3.css">
+    <link rel="stylesheet" type="text/css" href="{{ SITEURL }}/theme/css/style.css">
+    <link rel="stylesheet" type="text/css" href="{{ SITEURL }}/theme/css/jqcloud.css">
+    <link rel="stylesheet" type="text/css" href="{{ SITEURL }}/theme/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ SITEURL }}/theme/css/pygments-highlight-github.css">
+    {% if MINIMALXY_CUSTOM_CSS %}
+    <link rel="stylesheet" type="text/css" href="{{ SITEURL }}/{{ MINIMALXY_CUSTOM_CSS }}">
+    {% endif %}
+
+    <!-- Icon -->
+    {% if MINIMALXY_FAVICON %}
+    <link rel="shortcut icon" type="image/x-icon" href="{{ SITEURL }}/{{ MINIMALXY_FAVICON }}">
+    {% endif %}
+
+    <!-- JavaScript -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <script src="{{ SITEURL }}/theme/js/jqcloud.min.js"></script>
+  </head>
+
+  <body>
+    <div class="w3-row w3-card w3-white">
+      <header id="header">
+        {% if " " in AUTHOR %}
+        <a href="{{ SITEURL }}" id="header-logo" title="Home">{{ AUTHOR[0] + AUTHOR[AUTHOR.index(" ")+1] }}</a>
+        {% else %}
+        <a href="{{ SITEURL }}" id="header-logo" title="Home">{{ AUTHOR[0] }}</a>
+        {% endif %}
+        <nav id="header-menu">
+          <ul>
+            {% if DISPLAY_PAGES_ON_MENU %}
+n            {% for p in pages %}
+            <li class="w3-bottombar w3-border-white w3-hover-border-green{% if p==page %} active{% endif %}"><a href="{{ SITEURL }}/{{ p.url }}">{{ p.title }}</a></li>
+            {% endfor %}
+            {% endif %}
+            {% if DISPLAY_CATEGORIES_ON_MENU %}
+            {% for cat, null in categories %}
+            {% if cat != DEFAULT_CATEGORY %}
+            <li class="w3-bottombar w3-border-white w3-hover-border-green" {% if cat == category %}style="font-weight: bold;"{% endif %}><a href="{{ SITEURL }}/{{ cat.url }}">{{ cat }}</a></li>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+            {% for title, link in MENUITEMS %}
+            <li class="w3-bottombar w3-border-white w3-hover-border-green"><a href="{{ link }}">{{ title }}</a></li>
+            {% endfor %}
+          </ul>
+        </nav>
+      </header>
+    </div>
+
+    {% block content_title %}
+    {% endblock %}
+
+    {% block content %}
+    {% endblock %}
+
+    <footer id="footer">
+      <div id="footer-copyright" class="w3-center w3-small w3-text-grey w3-padding-48">
+        <span>
+          &copy;
+          {% if MINIMALXY_START_YEAR and MINIMALXY_CURRENT_YEAR %}
+          {{ MINIMALXY_START_YEAR }}{% if MINIMALXY_START_YEAR != MINIMALXY_CURRENT_YEAR %}&dash;{{ MINIMALXY_CURRENT_YEAR }}{% endif %}
+          {% endif %}
+          {{ AUTHOR }}
+          {% if FEED_ALL_ATOM %} | <a href="{{ FEED_DOMAIN }}/{{ FEED_ALL_ATOM }}">Atom feed <i class="fa fa-rss" aria-hidden="true"></i></a>{% endif %}
+        </span>
+      </div>
+    </footer>
+
+    {% if GOOGLE_ANALYTICS %}
+      {% include "ga.html" %}
+    {% endif %}
+
+    {% if PIWIK_URL and PIWIK_SITE_ID %}
+      {% include "piwik.html" %}
+    {% endif %}
+
+  </body>
+</html>
