@@ -18,12 +18,12 @@
     <meta property="og:title" content="The Annotated Transformer"/>
     <meta property="og:description" content="In this post I present an &#34;annotated&#34; version of the paper in the form of a line-by-line implementation. I have reordered and deleted some sections from the original paper and added comments throughout."/>
     <meta property="og:site_name" content="Sasha Rush" />
-    <meta property="og:url" content="/the-annotated-transformer.html"/>
+    <meta property="og:url" content="https://blog.rush-nlp.com/the-annotated-transformer.html"/>
 
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="The Annotated Transformer">
     <meta name="twitter:description" content="In this post I present an &#34;annotated&#34; version of the paper in the form of a line-by-line implementation. I have reordered and deleted some sections from the original paper and added comments throughout.">
-    <meta name="twitter:url" content="/the-annotated-transformer.html">
+    <meta name="twitter:url" content="https://blog.rush-nlp.com/the-annotated-transformer.html">
 
     <!-- Feed -->
     <link rel="alternate" type="application/rss+xml" href="https://blog-rush-nlp-com.disqus.com/latest.rss" title="Sasha Rush Comments RSS Feed">
@@ -238,31 +238,31 @@ function render(renderMode) {
 render(RENDER_MODE.STATIC);"></script>
     <!-- CSS -->
     <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:regular,bold">
-    <link rel="stylesheet" type="text/css" href="/theme/css/w3.css">
-    <link rel="stylesheet" type="text/css" href="/theme/css/style.css">
-    <link rel="stylesheet" type="text/css" href="/theme/css/jqcloud.css">
-    <link rel="stylesheet" type="text/css" href="/theme/css/font-awesome.min.css">
-    <link rel="stylesheet" type="text/css" href="/theme/css/pygments-highlight-github.css">
-    <link rel="stylesheet" type="text/css" href="/static/custom.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/w3.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/style.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/jqcloud.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/pygments-highlight-github.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/static/custom.css">
 
     <!-- Icon -->
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="https://blog.rush-nlp.com/favicon.ico">
 
     <!-- JavaScript -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
-    <script src="/theme/js/jqcloud.min.js"></script>
+    <script src="https://blog.rush-nlp.com/theme/js/jqcloud.min.js"></script>
   </head>
 
   <body>
     <div class="w3-row w3-card w3-white">
       <header id="header">
-        <a href="" id="header-logo" title="Home">SR</a>
+        <a href="https://blog.rush-nlp.com" id="header-logo" title="Home">SR</a>
         <nav id="header-menu">
           <ul>
-n                        <li class="w3-bottombar w3-border-white w3-hover-border-green" ><a href="/category/dex.html">Dex</a></li>
-            <li class="w3-bottombar w3-border-white w3-hover-border-green" style="font-weight: bold;"><a href="/category/nlp.html">NLP</a></li>
-            <li class="w3-bottombar w3-border-white w3-hover-border-green" ><a href="/category/rants.html">Rants</a></li>
-            <li class="w3-bottombar w3-border-white w3-hover-border-green" ><a href="/category/teaching.html">Teaching</a></li>
+n                        <li class="w3-bottombar w3-border-white w3-hover-border-green" ><a href="https://blog.rush-nlp.com/category/dex.html">Dex</a></li>
+            <li class="w3-bottombar w3-border-white w3-hover-border-green" style="font-weight: bold;"><a href="https://blog.rush-nlp.com/category/nlp.html">NLP</a></li>
+            <li class="w3-bottombar w3-border-white w3-hover-border-green" ><a href="https://blog.rush-nlp.com/category/rants.html">Rants</a></li>
+            <li class="w3-bottombar w3-border-white w3-hover-border-green" ><a href="https://blog.rush-nlp.com/category/teaching.html">Teaching</a></li>
           </ul>
         </nav>
       </header>
@@ -277,20 +277,20 @@ n                        <li class="w3-bottombar w3-border-white w3-hover-border
         <h1>The Annotated Transformer</h1>
         <div class="post-info">
           <div class="w3-opacity w3-margin-right w3-margin-bottom" style="flex-grow: 1;">
-            <span><time datetime="2018-03-01T10:00:00-05:00">Thu 01 March 2018</time> in <a href="/category/nlp.html" title="All articles in category NLP">NLP</a></span>
+            <span><time datetime="2018-03-01T10:00:00-05:00">Thu 01 March 2018</time> in <a href="https://blog.rush-nlp.com/category/nlp.html" title="All articles in category NLP">NLP</a></span>
           </div>
           <div>
             <span class="w3-tag w3-light-grey w3-text-green w3-hover-green">
-              <a href="/tag/teaching.html" title="All articles with Teaching tag">#Teaching</a>
+              <a href="https://blog.rush-nlp.com/tag/teaching.html" title="All articles with Teaching tag">#Teaching</a>
             </span>
             <span class="w3-tag w3-light-grey w3-text-green w3-hover-green">
-              <a href="/tag/python.html" title="All articles with Python tag">#Python</a>
+              <a href="https://blog.rush-nlp.com/tag/python.html" title="All articles with Python tag">#Python</a>
             </span>
             <span class="w3-tag w3-light-grey w3-text-green w3-hover-green">
-              <a href="/tag/ml.html" title="All articles with Ml tag">#ML</a>
+              <a href="https://blog.rush-nlp.com/tag/ml.html" title="All articles with Ml tag">#ML</a>
             </span>
             <span class="w3-tag w3-light-grey w3-text-green w3-hover-green">
-              <a href="/tag/nlp.html" title="All articles with Nlp tag">#NLP</a>
+              <a href="https://blog.rush-nlp.com/tag/nlp.html" title="All articles with Nlp tag">#NLP</a>
             </span>
           </div>
         </div>
@@ -16584,10 +16584,10 @@ var disqus_config = function () {
 
           <p style="font-size:10pt; font-style: italic;">Did you like this article? Share it with your friends!</p>
           <div id="share" class="share">
-            <a href="https://www.facebook.com/sharer.php?u=/the-annotated-transformer.html&amp;t=Sasha%20Rush%3A%20The%20Annotated%20Transformer" target="_blank" class="w3-btn w3-indigo">
+            <a href="https://www.facebook.com/sharer.php?u=https%3A//blog.rush-nlp.com/the-annotated-transformer.html&amp;t=Sasha%20Rush%3A%20The%20Annotated%20Transformer" target="_blank" class="w3-btn w3-indigo">
               <i class="fa fa-facebook"></i> <span>Facebook</span>
             </a>
-            <a href="https://twitter.com/share?url=/the-annotated-transformer.html&amp;text=Sasha%20Rush%3A%20The%20Annotated%20Transformer" target="_blank" class="w3-btn w3-blue">
+            <a href="https://twitter.com/share?url=https%3A//blog.rush-nlp.com/the-annotated-transformer.html&amp;text=Sasha%20Rush%3A%20The%20Annotated%20Transformer" target="_blank" class="w3-btn w3-blue">
               <i class="fa fa-twitter"></i> <span>Twitter</span>
             </a>
           </div>
@@ -16603,8 +16603,8 @@ var disqus_config = function () {
              */
             
             var disqus_config = function () {
-              this.page.url = '/the-annotated-transformer.html';  // Replace PAGE_URL with your page's canonical URL variable
-              this.page.identifier = '/the-annotated-transformer.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+              this.page.url = 'https://blog.rush-nlp.com/the-annotated-transformer.html';  // Replace PAGE_URL with your page's canonical URL variable
+              this.page.identifier = 'https://blog.rush-nlp.com/the-annotated-transformer.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
             };
             
             (function() {  // REQUIRED CONFIGURATION VARIABLE: EDIT THE SHORTNAME BELOW

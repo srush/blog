@@ -170,7 +170,7 @@ ul.social li a:hover {
   display: flex;
   align-items: center;
   margin: 0 auto;
-  max-width: 1000px;
+  max-width: 600px;
   justify-content: center;
   flex-wrap: wrap;
 }
