@@ -59,6 +59,8 @@ AUTHOR_WEB = 'http://rush-nlp.com'
 GOOGLE_ANALYTICS = 'UA-12345678-9'
 DISQUS_SITENAME = 'blog-rush-nlp-com'
 
+OUTPUT_PATH = 'docs/'
+
 # Social
 SOCIAL = (
     ('twitter', 'http://twitter.com/srush_nlp'),
