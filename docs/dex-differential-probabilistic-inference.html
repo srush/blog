@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>Dex: Differential Probabilistic Inference &ndash; Sasha Rush</title>
+
+    <!-- Meta -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Social -->
+    <meta property="article:author" content="Sasha Rush" />
+    <meta property="article:section" content="Dex" />
+    <meta property="article:published_time" content="2021-06-18" />
+
+    <meta property="og:type" content="article"/>
+    <meta property="og:title" content="Dex: Differential Probabilistic Inference"/>
+    <meta property="og:description" content="A differential approach to probabilistic modeling in Dex"/>
+    <meta property="og:site_name" content="Sasha Rush" />
+    <meta property="og:url" content="https://blog.rush-nlp.com/dex-differential-probabilistic-inference.html"/>
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dex: Differential Probabilistic Inference">
+    <meta name="twitter:description" content="A differential approach to probabilistic modeling in Dex">
+    <meta name="twitter:url" content="https://blog.rush-nlp.com/dex-differential-probabilistic-inference.html">
+
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" href="https://blog-rush-nlp-com.disqus.com/latest.rss" title="Sasha Rush Comments RSS Feed">
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/javascript" async
+  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+  <script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+  tex2jax: {
+  inlineMath: [['$','$'], ['\\(','\\)']],
+  processEscapes: true
+  }
+  });
+  </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+    <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js"></script>
+
+    <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js" onload="// Copyright 2019 Google LLC
+//
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file or at
+// https://developers.google.com/open-source/licenses/bsd
+
+var katexOptions = {
+    delimiters: [
+        {left: &quot;$$&quot;, right: &quot;$$&quot;, display: true},
+        {left: &quot;\\[&quot;, right: &quot;\\]&quot;, display: true},
+        {left: &quot;$&quot;, right: &quot;$&quot;, display: false},
+        {left: &quot;\\(&quot;, right: &quot;\\)&quot;, display: false}
+    ],
+    // Enable commands that load resources or change HTML attributes
+    // (e.g. hyperlinks): https://katex.org/docs/security.html.
+    trust: true
+};
+
+var cells = {};
+
+function append_contents(key, contents) {
+    if (key in cells) {
+        var cur_cells = cells[key];
+    } else {
+        var cell = document.createElement(&quot;div&quot;);
+        cell.className = &quot;cell&quot;;
+        cells[key] = [cell];
+        var cur_cells = [cell];
+    }
+    for (var i = 0; i &lt; contents.length; i++) {
+        for (var j = 0; j &lt; cur_cells.length; j++) {
+            var node = lookup_address(cur_cells[j], contents[i][0])
+            node.innerHTML += contents[i][1];
+        }
+    }
+}
+
+function lookup_address(cell, address) {
+    var node = cell
+    for (i = 0; i &lt; address.length; i++) {
+        node = node.children[address[i]]
+    }
+    return node
+}
+
+function renderLaTeX() {
+    // Render LaTeX equations in prose blocks via KaTeX.
+    var proseBlocks = document.querySelectorAll(&quot;.prose-block&quot;);
+    Array.from(proseBlocks).map((proseBlock) =&gt;
+        renderMathInElement(proseBlock, katexOptions)
+    );
+}
+
+/**
+ * Rendering the Table of Contents / Navigation Bar
+ * 2 key functions
+ *  - `updateNavigation()` which inserts/updates the navigation bar
+ *  - and it&#39;s helper `extractStructure()` which extracts the structure of the page
+ *    and adds ids to heading elements.
+*/
+function updateNavigation() {
+    function navItemList(struct) {
+        var listEle = document.createElement(&#39;ol&#39;)
+        struct.children.forEach(childStruct=&gt;
+            listEle.appendChild(navItem(childStruct))
+        );
+        return listEle;
+    }
+    function navItem(struct) {
+        var a = document.createElement(&#39;a&#39;);
+        a.appendChild(document.createTextNode(struct.text));
+        a.title = struct.text;
+        a.href = &quot;#&quot;+struct.id;
+
+        var ele = document.createElement(&#39;li&#39;)
+        ele.appendChild(a)
+        ele.appendChild(navItemList(struct));
+        return ele;
+    }
+
+    var navbarEle = document.getElementById(&quot;navbar&quot;)
+    if (navbarEle === null) {  // create it
+        navbarEle = document.createElement(&quot;div&quot;);
+        navbarEle.id=&quot;navbar&quot;;
+        navOuterEle = document.createElement(&quot;nav&quot;)
+        navOuterEle.appendChild(navbarEle);
+        document.body.prepend(navOuterEle);
+    }
+
+    navbarEle.innerHTML = &quot;&quot;
+    var structure = extractStructure()
+    navbarEle.appendChild(navItemList(structure));
+}
+
+function extractStructure() { // Also sets ids on h1,h2,...
+    var headingsNodes = document.querySelectorAll(&quot;h1, h2, h3, h4, h5, h6&quot;);
+    // For now we are just fulling going to regenerate the structure each time
+    // Might be better if we made minimal changes, but ð¤·
+
+    // Extract the structure of the document
+    var structure = {children:[]}
+    var active = [structure.children];
+    headingsNodes.forEach(
+        function(currentValue, currentIndex) {
+            currentValue.id = &quot;s-&quot; + currentIndex;
+            var currentLevel = parseInt(currentValue.nodeName[1]);
+
+            // Insert dummy levels up for any levels that are skipped
+            for (var i=active.length; i &lt; currentLevel; i++) {
+                var dummy = {id: &quot;&quot;, text: &quot;&quot;, children: []}
+                active.push(dummy.children);
+                var parentList = active[i-1]
+                parentList.push(dummy);
+            }
+            // delete this level and everything after
+            active.splice(currentLevel, active.length);
+
+            var currentStructure = {
+                id: currentValue.id,
+                text: currentValue.textContent,
+                children: [],
+            };
+            active.push(currentStructure.children);
+
+            var parentList = active[active.length-2]
+            parentList.push(currentStructure);
+        },
+    );
+    return structure;
+}
+
+/**
+ * HTML rendering mode.
+ * Static rendering is used for static HTML pages.
+ * Dynamic rendering is used for dynamic HTML pages via `dex web`.
+ *
+ * @enum {string}
+ */
+var RENDER_MODE = Object.freeze({
+  STATIC: &quot;static&quot;,
+  DYNAMIC: &quot;dynamic&quot;,
+})
+
+/**
+ * Renders the webpage.
+ * @param {RENDER_MODE} renderMode The render mode, either static or dynamic.
+ */
+function render(renderMode) {
+    if (renderMode == RENDER_MODE.STATIC) {
+        // For static pages, simply call rendering functions once.
+        renderLaTeX();
+        updateNavigation();
+    } else {
+        // For dynamic pages (via `dex web`), listen to update events.
+        var source = new EventSource(&quot;/getnext&quot;);
+        source.onmessage = function(event) {
+            var body = document.getElementById(&quot;main-output&quot;);
+            var msg = JSON.parse(event.data);
+            if (msg == &quot;start&quot;) {
+                body.innerHTML = &quot;&quot;;
+                cells = {}
+                return
+            }
+            var order    = msg[0];
+            var contents = msg[1];
+            for (var i = 0; i &lt; contents.length; i++) {
+                append_contents(contents[i][0], contents[i][1]);
+            }
+            if (order != null) {
+                var new_cells = {};
+                body.innerHTML = &quot;&quot;;
+                for (var i = 0; i &lt; order.val.length; i++) {
+                    var key = order.val[i]
+                    var cur_cells = cells[key]
+                    if (cur_cells.length == 0) {
+                        var cur_cell = new_cells[key][0].cloneNode(true)
+                    } else {
+                        var cur_cell = cur_cells.pop()
+                        if (key in new_cells) {
+                            new_cells[key].push(cur_cell);
+                        } else {
+                            new_cells[key] = [cur_cell];
+                        }
+                    }
+                    body.appendChild(cur_cell);
+                }
+                Object.assign(cells, new_cells);
+            }
+            renderLaTeX();
+            updateNavigation();
+        };
+    }
+}
+render(RENDER_MODE.STATIC);"></script>
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:regular,bold">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/w3.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/style.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/jqcloud.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/theme/css/pygments-highlight-github.css">
+    <link rel="stylesheet" type="text/css" href="https://blog.rush-nlp.com/static/custom.css">
+
+    <!-- Icon -->
+    <link rel="shortcut icon" type="image/x-icon" href="https://blog.rush-nlp.com/favicon.ico">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <!-- JavaScript -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <script src="https://blog.rush-nlp.com/theme/js/jqcloud.min.js"></script>
+  </head>
+
+  <body>
+    <div class="w3-row w3-card w3-white">
+          <header class="site-header">
+
+  <div class="wrapper">
+
+    <span><img width="50px" style="padding:5px" src="http://rush-nlp.com/images/cornell.png"></span>
+
+    <span>
+        <!-- <a class="site-title" href="/"></a> -->
+
+    </span>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+       
+         <a class="page-link" href="http://rush-nlp.com/">Main</a>
+          
+          
+          
+          <a class="page-link" href="http://rush-nlp.com/members/">Group</a>
+          
+          
+          
+          <a class="page-link" href="http://rush-nlp.com/projects/">Projects</a>
+          
+          
+          
+          <a class="page-link" href="http://rush-nlp.com/papers/">Publications</a>
+          
+          
+        <a class="page-link" href="http://blog.rush-nlp.com">Blog</a>
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+    </div>
+
+
+
+    <br><br><br>
+
+    <article>
+      <header class="w3-container col-main">
+        <h1>Dex: Differential Probabilistic Inference</h1>
+        <div class="post-info">
+          <div class="w3-opacity w3-margin-right w3-margin-bottom" style="flex-grow: 1;">
+            <span><time datetime="2021-06-18T12:00:00-04:00">Fri 18 June 2021</time> in <a href="https://blog.rush-nlp.com/category/dex.html" title="All articles in category Dex">Dex</a></span>
+          </div>
+          <div>
+            <span class="w3-tag w3-light-grey w3-text-green w3-hover-green">
+              <a href="https://blog.rush-nlp.com/tag/probability.html" title="All articles with Probability tag">#Probability</a>
+            </span>
+            <span class="w3-tag w3-light-grey w3-text-green w3-hover-green">
+              <a href="https://blog.rush-nlp.com/tag/dex.html" title="All articles with Dex tag">#Dex</a>
+            </span>
+            <span class="w3-tag w3-light-grey w3-text-green w3-hover-green">
+              <a href="https://blog.rush-nlp.com/tag/autodiff.html" title="All articles with Autodiff tag">#AutoDiff</a>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <br>
+
+
+      <div class="col-main w3-container">
+        <section id="content">
+          <div id="main-output"><div class="cell"><div class="prose-block">
+</div></div><div class="cell"><div class="prose-block"><p>This notebook develops an unconventional approach to probabilistic
+inference using Dex tables and auto-differentiation. It is based
+loosely on the approach described in:</p>
+</div></div><div class="cell"><div class="prose-block"><p><code>A Differential Approach to Inference in Bayesian Networks, Adnan Darwiche (2003)</code></p>
+</div></div><div class="cell"><div class="prose-block"><p>This approach can be thought of as a probabilistic programming
+language (PPL) in the sense the inference is seperated from the
+modeling language. However, it does not require interrupting
+standard control flow.</p>
+</div></div><div class="cell"><div class="prose-block"><h2>Running Example 1: Coins and Dice</h2>
+</div></div><div class="cell"><div class="prose-block"><p>Let us start with a simple probabilistic modeling example to establish some notation.</p>
+<p>In this example we have a coin and two weighted dice. We first
+flip the coin, if it is heads we roll dice 1 and if it is tails we
+roll dice 2.</p>
+</div></div><div class="cell"><div class="code-block"><span class="type-name">Coin</span> <span class="symbol">=</span> <span class="type-name">Fin</span> 2
+</div></div><div class="cell"><div class="code-block">[tails<span class="symbol">,</span> heads] <span class="symbol">=</span> <span class="keyword">for</span> i<span class="symbol">:</span><span class="type-name">Coin</span><span class="symbol">.</span> i
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block"><span class="type-name">Dice</span> <span class="symbol">=</span> <span class="type-name">Range</span> 1 7
+</div></div><div class="cell"><div class="code-block">roll <span class="symbol">=</span> <span class="symbol">\</span>i <span class="symbol">.</span> (i <span class="symbol">-</span> 1)<span class="symbol">@</span> <span class="type-name">Dice</span>
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block"><span class="type-name">None</span> <span class="symbol">=</span> <span class="type-name">Fin</span> 1
+</div></div><div class="cell"><div class="code-block">nil <span class="symbol">=</span> 0<span class="symbol">@</span><span class="type-name">None</span>
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">coin <span class="symbol">:</span> <span class="type-name">Coin</span> <span class="symbol">=&gt;</span><span class="type-name">Float</span> <span class="symbol">=</span> [0<span class="symbol">.</span>2<span class="symbol">,</span> 0<span class="symbol">.</span>8]
+</div></div><div class="cell"><div class="code-block">dice_1 <span class="symbol">:</span> <span class="type-name">Dice</span> <span class="symbol">=&gt;</span> <span class="type-name">Float</span> <span class="symbol">=</span> <span class="keyword">for</span> i<span class="symbol">.</span> 1<span class="symbol">.</span>0 <span class="symbol">/</span> 6<span class="symbol">.</span>0
+</div></div><div class="cell"><div class="code-block">dice_2 <span class="symbol">:</span> <span class="type-name">Dice</span> <span class="symbol">=&gt;</span> <span class="type-name">Float</span> <span class="symbol">=</span> [0<span class="symbol">.</span>5<span class="symbol">,</span> 0<span class="symbol">.</span>1<span class="symbol">,</span> 0<span class="symbol">.</span>1<span class="symbol">,</span> 0<span class="symbol">.</span>1<span class="symbol">,</span> 0<span class="symbol">.</span>1<span class="symbol">,</span> 0<span class="symbol">.</span>1]
+</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><p>This defines a  generative process over two random variables $\mathbf{X} = { A, B } $, the coin flip and the dice roll respectively. We can write the process explicitly as,</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$a \sim Pr(A)$$
+$$ b \sim Pr(B\ |\ A=a) $$</p>
+</div></div><div class="cell"><div class="prose-block"><h2>Probability Combinators</h2>
+</div></div><div class="cell"><div class="prose-block"><p>A discrete probability distribution is a normalized table of probabilities</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">data</span> <span class="type-name">Dist</span> variables <span class="symbol">=</span> <span class="type-name">AsDist</span> (variables <span class="symbol">=&gt;</span> <span class="type-name">Float</span>)
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> (<span class="symbol">??</span>) (y<span class="command">:m</span>) (<span class="type-name">AsDist</span> x<span class="symbol">:</span> <span class="type-name">Dist</span> m) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span> x<span class="symbol">.</span>y
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>Distributions are easy to create. Here are a couple simple ones.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> normalize (x<span class="symbol">:</span> m<span class="symbol">=&gt;</span><span class="type-name">Float</span>) <span class="symbol">:</span> <span class="type-name">Dist</span> m <span class="symbol">=</span> <span class="type-name">AsDist</span> <span class="keyword">for</span> i<span class="symbol">.</span> x<span class="symbol">.</span>i <span class="symbol">/</span> sum x
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> uniform <span class="symbol">:</span> <span class="type-name">Dist</span> m  <span class="symbol">=</span> normalize <span class="keyword">for</span> i<span class="symbol">.</span> 1<span class="symbol">.</span>0 
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> delta (x<span class="command">:m</span>) <span class="symbol">:</span> <span class="type-name">Dist</span> m  <span class="symbol">=</span> <span class="type-name">AsDist</span> <span class="keyword">for</span> i<span class="symbol">.</span> select ((ordinal x) <span class="symbol">==</span> (ordinal i)) 1<span class="symbol">.</span>0 0<span class="symbol">.</span>0
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block"><span class="keyword">instance</span> <span class="type-name">Arbitrary</span> (<span class="type-name">Dist</span> m)
+    arb <span class="symbol">=</span> <span class="symbol">\</span>key<span class="symbol">.</span>
+        a <span class="symbol">=</span> arb key
+        normalize <span class="symbol">$</span> <span class="keyword">for</span> i<span class="symbol">.</span> abs a<span class="symbol">.</span>i
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>And they are displayed by their support.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> support (<span class="type-name">AsDist</span> x<span class="symbol">:</span> <span class="type-name">Dist</span> m)  <span class="symbol">:</span> <span class="type-name">List</span> (m <span class="symbol">&amp;</span> <span class="type-name">Float</span>) <span class="symbol">=</span>
+    concat <span class="symbol">$</span> <span class="keyword">for</span> i<span class="symbol">.</span> select (x<span class="symbol">.</span>i <span class="symbol">&gt;</span> 0<span class="symbol">.</span>0) (<span class="type-name">AsList</span> 1 [(i<span class="symbol">,</span> x<span class="symbol">.</span>i)]) mempty
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block"><span class="keyword">instance</span> [<span class="type-name">Show</span> m] <span class="type-name">Show</span> (<span class="type-name">Dist</span> m)
+         show <span class="symbol">=</span> <span class="symbol">\</span>a<span class="symbol">.</span>
+              (<span class="type-name">AsList</span> _  out) <span class="symbol">=</span> support a
+              concat <span class="symbol">$</span> <span class="keyword">for</span> i<span class="symbol">.</span> &quot;<span class="type-name">Key</span><span class="symbol">:</span> &quot; <span class="symbol">&lt;&gt;</span> (show <span class="symbol">$</span> fst out<span class="symbol">.</span>i) <span class="symbol">&lt;&gt;</span> &quot; <span class="type-name">Prob</span><span class="symbol">:</span> &quot; <span class="symbol">&lt;&gt;</span> (show <span class="symbol">$</span> snd out<span class="symbol">.</span>i) <span class="symbol">&lt;&gt;</span> &quot;<span class="symbol">\</span>n&quot;
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block"><span class="keyword">instance</span> <span class="type-name">Show</span> (<span class="type-name">Range</span> i j)
+         show <span class="symbol">=</span> <span class="symbol">\</span>a <span class="symbol">.</span> show <span class="symbol">$</span> ordinal a
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">show <span class="symbol">$</span> (delta (4<span class="symbol">@</span>_))<span class="symbol">:</span><span class="type-name">Dist</span> <span class="type-name">Dice</span>
+</div><div class="result-block">(AsList 15 &quot;Key: 4 Prob: 1
+&quot;)</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><p>Expectations can be taken over arbitrary tables.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> expect [<span class="type-name">VSpace</span> out] (<span class="type-name">AsDist</span> x<span class="symbol">:</span> <span class="type-name">Dist</span> m) (y <span class="symbol">:</span> m <span class="symbol">=&gt;</span> out) <span class="symbol">:</span> out <span class="symbol">=</span>
+    sum <span class="keyword">for</span> m&#39;<span class="symbol">.</span> x<span class="symbol">.</span>m&#39; <span class="symbol">.*</span> y<span class="symbol">.</span>m&#39;
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>To represent conditional probabilities such as $ Pr(B \ |\ A)$ we define a type alias.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> <span class="type-name">Pr</span> (b<span class="symbol">:</span><span class="type-name">Type</span>) (a<span class="symbol">:</span><span class="type-name">Type</span>)<span class="symbol">:</span> <span class="type-name">Type</span> <span class="symbol">=</span> a <span class="symbol">=&gt;</span> <span class="type-name">Dist</span> b
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>With this machinery we can define distributions for the coin and the dice.</p>
+</div></div><div class="cell"><div class="code-block">p_<span class="type-name">A</span> <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Coin</span> <span class="type-name">None</span> <span class="symbol">=</span> [<span class="type-name">AsDist</span> coin]
+</div></div><div class="cell"><div class="code-block">p_<span class="type-name">B</span>_<span class="type-name">A</span> <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Dice</span> <span class="type-name">Coin</span>  <span class="symbol">=</span> [<span class="type-name">AsDist</span> dice_1<span class="symbol">,</span> <span class="type-name">AsDist</span> dice_2]
+</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><h2>Attempt 1: Observations and Marginalization</h2>
+</div></div><div class="cell"><div class="prose-block"><p>This allows us to compute the probability of any full observation
+from our model.
+$$Pr(A=a, B=b) =  Pr(B=b\ | A=a) Pr(A=a) $$</p>
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> p_<span class="type-name">AB</span> (a<span class="symbol">:</span><span class="type-name">Coin</span>) (b<span class="symbol">:</span><span class="type-name">Dice</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    (a <span class="symbol">??</span> p_<span class="type-name">A</span><span class="symbol">.</span>nil) <span class="symbol">*</span>
+    (b <span class="symbol">??</span> p_<span class="type-name">B</span>_<span class="type-name">A</span><span class="symbol">.</span>a)
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">p_<span class="type-name">AB</span> heads (roll 6)
+</div><div class="result-block">0.08</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><p>However, this assumes that we have full observation
+of our variables. What if the coin is latent? This requires a sum.
+$$Pr(B) = \sum_a Pr(B\ | A=a) Pr(A=a) $$</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> p_<span class="type-name">B</span> (b<span class="symbol">:</span><span class="type-name">Dice</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    sum <span class="keyword">for</span> a<span class="symbol">.</span> (a <span class="symbol">??</span> p_<span class="type-name">A</span><span class="symbol">.</span>nil) <span class="symbol">*</span>
+     (b <span class="symbol">??</span> p_<span class="type-name">B</span>_<span class="type-name">A</span><span class="symbol">.</span>a)
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">p_<span class="type-name">B</span> (roll 6)
+</div><div class="result-block">0.113333</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><p>But now we have two seperate functions for the same model!
+This feels unnecessary and bug-prone.</p>
+</div></div><div class="cell"><div class="prose-block"><h2>Attempt 2: Indicator Variables and the Network Polynomial</h2>
+</div></div><div class="cell"><div class="prose-block"><p>In order to make things simpler we will introduce explicit <em>indicator variables</em> $\lambda$
+to the modeling language.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> <span class="type-name">Var</span> (a<span class="symbol">:</span><span class="type-name">Type</span>) <span class="symbol">:</span> <span class="type-name">Type</span> <span class="symbol">=</span> a <span class="symbol">=&gt;</span> <span class="type-name">Float</span>
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>These can either be observed or latent.
+If a random variable is observed then we use an indicator.
+The expectation over the indicator gives,</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$ p(A=a) = E_{a' \sim p(A)} \lambda_{a'} $$</p>
+</div></div><div class="cell"><div class="prose-block"><p>If it is latent the variable is one everywhere.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> observed (x<span class="command">:a</span>) <span class="symbol">:</span> <span class="type-name">Var</span> a <span class="symbol">=</span> <span class="keyword">for</span> i<span class="symbol">.</span> select ((ordinal i) <span class="symbol">==</span> (ordinal x)) 1<span class="symbol">.</span>0 0<span class="symbol">.</span>0
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> latent <span class="symbol">:</span> <span class="type-name">Var</span> a <span class="symbol">=</span> one
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>The probability <em>chain rule</em> tells us that we can propagate conditioning.
+$$\sum_{b} Pr(A,\ B = b)  = Pr(A) \sum_b Pr(B=b\ | A)$$</p>
+</div></div><div class="cell"><div class="prose-block"><p>This implies that the expectation of these indicators factors as well.</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$E_{a, b\sim Pr(A,\ B)} \lambda_a \lambda_b  = E_{a'\sim Pr(A)}\left[ \lambda_a   E_{b' \sim Pr(B | A=a)} [\lambda_b] \right] $$</p>
+</div></div><div class="cell"><div class="prose-block"><p>We can write one step of this chain rule really cleanly in Dex.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> (<span class="symbol">~</span>) (lambda<span class="symbol">:</span><span class="type-name">Var</span> a) (pr<span class="symbol">:</span> <span class="type-name">Dist</span> a) (fn_a <span class="symbol">:</span> a <span class="symbol">=&gt;</span> <span class="type-name">Float</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    expect pr <span class="symbol">$</span> <span class="keyword">for</span> a&#39;<span class="symbol">.</span> lambda<span class="symbol">.</span>a&#39; <span class="symbol">*</span> fn_a<span class="symbol">.</span>a&#39;
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>This allows us to final write our model down in an extremely clean form.</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$a \sim Pr(A)$$
+$$ b \sim Pr(B\ |\ A=a) $$</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> coin_flip (a&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Coin</span>) (b&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Dice</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    (a&#39; <span class="symbol">~</span> p_<span class="type-name">A</span><span class="symbol">.</span>nil) (<span class="keyword">for</span> a<span class="symbol">.</span>
+     (b&#39; <span class="symbol">~</span> p_<span class="type-name">B</span>_<span class="type-name">A</span><span class="symbol">.</span>a) one)
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>Now we can easily reproduce all the result above.</p>
+</div></div><div class="cell"><div class="code-block">coin_flip (observed heads) (observed (roll 6))
+</div><div class="result-block">0.08</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">coin_flip (latent) (observed (roll 6))
+</div><div class="result-block">0.113333</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">coin_flip latent latent
+</div><div class="result-block">1.</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>This representation for joint distributions is known as the
+<em>network polynomial</em>. This is a <em>multi-linear</em> function that uses
+indicator variables to represent data observations.</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$ f(\lambda) = \sum_{\mathbf{x}} \prod_{x, \mathbf{u}\in \mathbf{x}} \lambda_x \theta_{x|\mathbf{u}} $$</p>
+</div></div><div class="cell"><div class="prose-block"><p>Here $\theta$ is the model parameters. These play the same role as above.
+The $\lambda$ are <em>evidence indicators</em> which indicate the states of
+the variable instantiations.</p>
+</div></div><div class="cell"><div class="prose-block"><p>The <em>network polynomial</em> can be used to compute <em>marginal</em> probabilities of any
+subset of variables. Let $\mathbf{e}$ be the observations of some subset of $\mathbf{X}$.
+Darwiche shows that -</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$f[\mathbf{e}] = p(\mathbf{E} = \mathbf{e})$$</p>
+</div></div><div class="cell"><div class="prose-block"><p>Where $f[e]$ assigns 1 to any $\lambda$ term that is consistent
+(non-contradictory) with $\mathbf{e}$ and 0 otherwise. Let's look at an example.</p>
+</div></div><div class="cell"><div class="prose-block"><h2>Differential  Inference</h2>
+</div></div><div class="cell"><div class="prose-block"><p>The network polynomial is a convenient method for computing probilities,
+but what makes it particularly useful is that it allows us to compute
+posterior probabilities simply using derivatives.</p>
+</div></div><div class="cell"><div class="prose-block"><p>For example, consider the probability on the coin flip given an observation of a
+dice roll. We can compute this using Bayes' Rule.</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$Pr(A | B=b) \propto Pr(B=b | A) Pr(A)$$</p>
+</div></div><div class="cell"><div class="code-block">normalize <span class="symbol">$</span> <span class="keyword">for</span> a<span class="symbol">.</span> coin_flip (observed a) (observed (roll 4))
+</div><div class="result-block">(AsDist [0.294118, 0.705882])</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>However using the network polynomial we can compute this same term purely with
+derivatives.  Computing partial derivatives directly yields joint terms.</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$\frac{df[\mathbf{e}]}{dx} = Pr(\mathbf{e}, x)$$</p>
+</div></div><div class="cell"><div class="prose-block"><p>This implies that the derivative of the log polynomial
+yields posterior terms.</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$\frac{d\log f[\mathbf{e}]}{dx} = Pr(x\ |\ \mathbf{e})$$</p>
+</div></div><div class="cell"><div class="prose-block"><p>Let us try this out. We can compute the posterior probabity of
+the first coin after observing the second.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> posterior (f <span class="symbol">:</span> (<span class="type-name">Var</span> a) <span class="symbol">-&gt;</span> <span class="type-name">Float</span>) <span class="symbol">:</span> <span class="type-name">Dist</span> a <span class="symbol">=</span>
+     <span class="type-name">AsDist</span> <span class="symbol">$</span> (grad (<span class="symbol">\</span> x<span class="symbol">.</span> log <span class="symbol">$</span> f x)) one
+</div></div><div class="cell"><div class="code-block">     
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">posterior (<span class="symbol">\</span> x <span class="symbol">.</span> coin_flip x (observed (roll 4)) )
+</div><div class="result-block">(AsDist [0.294118, 0.705882])</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>And this yields exactly the term above! This is really neat, it
+doesn't require any application of model specific inference.</p>
+</div></div><div class="cell"><div class="prose-block"><p>We can generalize this to compute a table of distributions.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> posteriorTab (f <span class="symbol">:</span> m <span class="symbol">=&gt;</span> (<span class="type-name">Var</span> a) <span class="symbol">-&gt;</span> <span class="type-name">Float</span>) <span class="symbol">:</span> m <span class="symbol">=&gt;</span> <span class="type-name">Dist</span> a <span class="symbol">=</span>
+     out <span class="symbol">=</span>  (grad (<span class="symbol">\</span> x<span class="symbol">.</span> log <span class="symbol">$</span> f x)) one
+     <span class="keyword">for</span> i<span class="symbol">.</span> <span class="type-name">AsDist</span> <span class="symbol">$</span> out<span class="symbol">.</span>i
+</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><h2>Example 2: Bayes Nets</h2>
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>A classic example in probalistic modeling is the Wet grass Bayes' net.
+In this example we need to infer the factors that could have led to
+the grass being wet.</p>
+</div></div><div class="cell"><div class="prose-block"><p>More details on the problem are given <a href="https://en.wikipedia.org/wiki/Bayesian_network">here</a>.</p>
+</div></div><div class="cell"><div class="prose-block"><p><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/SimpleBayesNet.svg/1024px-SimpleBayesNet.svg.png" alt="grass" /></p>
+</div></div><div class="cell"><div class="prose-block"></div></div><div class="cell"><div class="code-block"><span class="type-name">Rain</span> <span class="symbol">=</span> {norain <span class="symbol">:</span> <span class="type-name">Unit</span> <span class="symbol">|</span> rain <span class="symbol">:</span> <span class="type-name">Unit</span>}
+</div></div><div class="cell"><div class="code-block"><span class="type-name">Sprinkler</span> <span class="symbol">=</span> {nosprinkler <span class="symbol">:</span> <span class="type-name">Unit</span> <span class="symbol">|</span> sprinkler <span class="symbol">:</span> <span class="type-name">Unit</span>}
+</div></div><div class="cell"><div class="code-block"><span class="type-name">Grass</span> <span class="symbol">=</span> {notwet <span class="symbol">:</span> <span class="type-name">Unit</span> <span class="symbol">|</span> wet <span class="symbol">:</span> <span class="type-name">Unit</span>}
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> bernoulli (p<span class="symbol">:</span> <span class="type-name">Float</span>) <span class="symbol">:</span> <span class="type-name">Dist</span> m <span class="symbol">=</span>  <span class="type-name">AsDist</span> <span class="keyword">for</span> i<span class="symbol">.</span> [1<span class="symbol">.</span>0 <span class="symbol">-</span> p<span class="symbol">,</span> p]<span class="symbol">.</span>((ordinal i)<span class="symbol">@</span>_)
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>We now define the tables above.</p>
+</div></div><div class="cell"><div class="code-block">rain <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Rain</span> (<span class="type-name">Fin</span> 1) <span class="symbol">=</span> [bernoulli 0<span class="symbol">.</span>2]
+</div></div><div class="cell"><div class="code-block">sprinkler <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Sprinkler</span> <span class="type-name">Rain</span> <span class="symbol">=</span> <span class="keyword">for</span> r<span class="symbol">.</span> bernoulli <span class="symbol">$</span> <span class="keyword">case</span> r <span class="keyword">of</span>
+          {<span class="symbol">|</span>norain<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span> 0<span class="symbol">.</span>4
+          {<span class="symbol">|</span>rain<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span> 0<span class="symbol">.</span>01
+</div></div><div class="cell"><div class="code-block">          
+</div></div><div class="cell"><div class="code-block">grass <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Grass</span> (<span class="type-name">Sprinkler</span> <span class="symbol">&amp;</span> <span class="type-name">Rain</span>) <span class="symbol">=</span> <span class="keyword">for</span> (s<span class="symbol">,</span> r)<span class="symbol">.</span> bernoulli <span class="symbol">$</span>
+          <span class="keyword">case</span> s <span class="keyword">of</span> 
+            {<span class="symbol">|</span>nosprinkler<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span>
+                  <span class="keyword">case</span> r <span class="keyword">of</span>
+                     {<span class="symbol">|</span>norain<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span> 0<span class="symbol">.</span>0
+                     {<span class="symbol">|</span>rain<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span> 0<span class="symbol">.</span>8
+            {<span class="symbol">|</span>sprinkler<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span> 
+                  <span class="keyword">case</span> r <span class="keyword">of</span>
+                     {<span class="symbol">|</span>norain<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span> 0<span class="symbol">.</span>9
+                     {<span class="symbol">|</span>rain<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span> 0<span class="symbol">.</span>99
+</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><p>And the architecture of the Bayes net.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> wet_naive (r&#39; <span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Rain</span>)
+              (s&#39; <span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Sprinkler</span>)
+              (g&#39; <span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Grass</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    (r&#39; <span class="symbol">~</span> rain<span class="symbol">.</span>nil) (<span class="keyword">for</span> r<span class="symbol">.</span>
+     (s&#39; <span class="symbol">~</span> sprinkler<span class="symbol">.</span>r) (<span class="keyword">for</span> s<span class="symbol">.</span>
+      (g&#39; <span class="symbol">~</span> grass<span class="symbol">.</span>(s<span class="symbol">,</span>r)) one))
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">wet_naive (latent) (latent) (observed {<span class="symbol">|</span>wet<span class="symbol">=</span>()<span class="symbol">|</span>})
+</div><div class="result-block">0.44838</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">posterior (<span class="symbol">\</span>x<span class="symbol">.</span> wet_naive x (latent) (observed {<span class="symbol">|</span>wet<span class="symbol">=</span>()<span class="symbol">|</span>}))
+</div><div class="result-block">(AsDist [0.642312, 0.357688]@{norain: Unit | rain: Unit})</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><h2>Example 3: Dice Counting</h2>
+</div></div><div class="cell"><div class="prose-block"><p>Here's a classic elementary probability problem. Given two
+standard dice rolls, what is the probability distribution
+over their sum?</p>
+</div></div><div class="cell"><div class="prose-block"><p><img src="https://qph.fs.quoracdn.net/main-qimg-13d2e066e80c0ac1511e0477c6ffdcb4-c" alt="dice" /></p>
+</div></div><div class="cell"><div class="code-block"><span class="type-name">DiceSum</span> <span class="symbol">=</span> <span class="type-name">Range</span> 2 13
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>Helper functions for Dice sum</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> (<span class="symbol">+@+</span>) (a<span class="command">:a</span>&#39;) (b<span class="command">:b</span>&#39;) <span class="symbol">:</span> c <span class="symbol">=</span> (((ordinal a) <span class="symbol">+</span> (ordinal b))<span class="symbol">@</span>_)
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> roll_sum (x<span class="symbol">:</span><span class="type-name">Int</span>) <span class="symbol">:</span> <span class="type-name">DiceSum</span> <span class="symbol">=</span> (x <span class="symbol">-</span> 2)<span class="symbol">@</span>_
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> two_dice (dice <span class="symbol">:</span> <span class="type-name">Var</span> (<span class="type-name">Dice</span> <span class="symbol">&amp;</span> <span class="type-name">Dice</span>))  (dicesum <span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">DiceSum</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    (dice <span class="symbol">~</span> uniform) (<span class="keyword">for</span> (d1<span class="symbol">,</span> d2)<span class="symbol">.</span>
+     (dicesum <span class="symbol">~</span> delta (d1 <span class="symbol">+@+</span> d2)) one)
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>Here's the result.</p>
+</div></div><div class="cell"><div class="code-block">posterior (<span class="symbol">\</span>m<span class="symbol">.</span> two_dice latent m)
+</div><div class="result-block">(AsDist [ 0.027778
+        , 0.055556
+        , 0.083333
+        , 0.111111
+        , 0.138889
+        , 0.166667
+        , 0.138889
+        , 0.111111
+        , 0.083333
+        , 0.055556
+        , 0.027778 ]@(%IntRange 2 13))</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>We might also ask what the probability of the dice rolls given on output value.</p>
+</div></div><div class="cell"><div class="code-block">support <span class="symbol">$</span> posterior (<span class="symbol">\</span>m<span class="symbol">.</span> two_dice m (observed (roll_sum 4)))
+</div><div class="result-block">(AsList 3 [ (((0@%IntRange 1 7), (2@%IntRange 1 7)), 0.333333)
+          , (((1@%IntRange 1 7), (1@%IntRange 1 7)), 0.333333)
+          , (((2@%IntRange 1 7), (0@%IntRange 1 7)), 0.333333) ])</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><h2>Discussion - Conditional Independence</h2>
+</div></div><div class="cell"><div class="prose-block"><p>One tricky problem for discrete PPLs is modeling conditional independence.
+Models can be very slow to compute if we are not careful to exploint
+conditional independence properties such as Markov assumptions.</p>
+</div></div><div class="cell"><div class="prose-block"><p>For example, let us consider a more complex version of the coin flip
+example. We will flip three times. The choice of the second weighted coin
+depends on the first. The choice of third weighted coin depends on the second.</p>
+</div></div><div class="cell"><div class="prose-block"><p>$$a \sim Pr(A)$$
+$$ b \sim Pr(B\ |\ A=a) $$
+$$ c \sim Pr(C\ |\ B=b) $$</p>
+</div></div><div class="cell"><div class="prose-block"><p>In this example $C$ is conditionally independent of $A$ given $B$.</p>
+</div></div><div class="cell"><div class="prose-block"><p>We can be lazy and create the distributions randomly.</p>
+</div></div><div class="cell"><div class="code-block">coin1 <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Coin</span> <span class="type-name">None</span> <span class="symbol">=</span> arb <span class="symbol">$</span> newKey 1
+</div></div><div class="cell"><div class="code-block">coin2 <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Coin</span> <span class="type-name">Coin</span> <span class="symbol">=</span> arb <span class="symbol">$</span> newKey 2
+</div></div><div class="cell"><div class="code-block">coin3 <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Coin</span> <span class="type-name">Coin</span> <span class="symbol">=</span> arb <span class="symbol">$</span> newKey 3
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>Now here is the generative process.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> coin_flip2 (a&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Coin</span>) (b&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Coin</span>) (c&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Coin</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    (a&#39; <span class="symbol">~</span> coin1<span class="symbol">.</span>nil) (<span class="keyword">for</span> a<span class="symbol">.</span>
+     (b&#39; <span class="symbol">~</span> coin2<span class="symbol">.</span>a) (<span class="keyword">for</span> b<span class="symbol">.</span>
+      (c&#39; <span class="symbol">~</span> coin3<span class="symbol">.</span>b) one))
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>Note that as written this process looks like it does not take
+advantage of the conditional independence property of the model.
+The construction of the final coin is in a <code>for</code> constructor that
+contains <code>a</code>. However, Dex knows that <code>a</code> is not used in the inner
+most construct. In theory it can lift that out of the loop and exploit
+the conditional independence.</p>
+</div></div><div class="cell"><div class="prose-block"><p>Alternatively we can make this explicit and do the lifting ourselves.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> coin_flip_opt2 (a&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Coin</span>) (b&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Coin</span>) (c&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Coin</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    final_flip <span class="symbol">=</span> <span class="keyword">for</span> b<span class="symbol">.</span> (c&#39; <span class="symbol">~</span> coin3<span class="symbol">.</span>b) one
+    (a&#39; <span class="symbol">~</span> coin1<span class="symbol">.</span>nil) (<span class="keyword">for</span> a<span class="symbol">.</span>
+     (b&#39; <span class="symbol">~</span> coin2<span class="symbol">.</span>a) final_flip)
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><h2>Example 4: Monty Hall Problem</h2>
+</div></div><div class="cell"><div class="prose-block"><p>Perhaps the most celebrated elementary problem in conditional
+probability is the Monty Hall problem.</p>
+</div></div><div class="cell"><div class="prose-block"><p><a href="https://en.wikipedia.org/wiki/Monty_Hall_problem">Monty Hall</a></p>
+</div></div><div class="cell"><div class="prose-block"><p><img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Monty_open_door.svg" alt="Goat" /></p>
+</div></div><div class="cell"><div class="prose-block"><p>You are on a game show. The host asks you to pick a door at random to win a prize.
+After selecting a door, one of the remaining doors (without the prize) is removed.
+You are asked if you want to change your selection...</p>
+</div></div><div class="cell"><div class="code-block"><span class="type-name">Doors</span> <span class="symbol">=</span> <span class="type-name">Fin</span> 3
+</div></div><div class="cell"><div class="code-block"><span class="type-name">YesNo</span> <span class="symbol">=</span> { no<span class="symbol">:</span><span class="type-name">Unit</span> <span class="symbol">|</span> yes<span class="symbol">:</span><span class="type-name">Unit</span>}
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> yesno (x<span class="symbol">:</span><span class="type-name">Bool</span>) <span class="symbol">:</span> <span class="type-name">Dist</span> <span class="type-name">YesNo</span> <span class="symbol">=</span> delta <span class="symbol">$</span> select x {<span class="symbol">|</span>yes<span class="symbol">=</span>()<span class="symbol">|</span>} {<span class="symbol">|</span>no<span class="symbol">=</span>()<span class="symbol">|</span>}
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>The generative model is relatively simple</p>
+<ol>
+<li>We will first sample our pick and the door.</li>
+<li>Then we will consider changing our pick.</li>
+<li>Finally we will see if we won.</li>
+</ol>
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> monty_hall (change&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">YesNo</span>) (win&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">YesNo</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    (one <span class="symbol">~</span> uniform) (<span class="keyword">for</span> (pick<span class="symbol">,</span> correct)<span class="symbol">:</span> (<span class="type-name">Doors</span> <span class="symbol">&amp;</span> <span class="type-name">Doors</span>)<span class="symbol">.</span>
+     (change&#39; <span class="symbol">~</span> uniform) (<span class="keyword">for</span> change<span class="symbol">.</span>
+        win_dist <span class="symbol">=</span> <span class="keyword">case</span> change <span class="keyword">of</span> 
+                     {<span class="symbol">|</span>yes<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">-&gt;</span> yesno (pick <span class="symbol">/=</span> correct)
+                     {<span class="symbol">|</span>no<span class="symbol">=</span>()<span class="symbol">|</span>}  <span class="symbol">-&gt;</span> yesno (pick <span class="symbol">==</span> correct)
+        (win&#39; <span class="symbol">~</span> win_dist) one))
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>To check the odds we will compute probabity of winning conditioned
+on changing.</p>
+</div></div><div class="cell"><div class="code-block">{<span class="symbol">|</span>yes<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">??</span> (posterior <span class="symbol">$</span> monty_hall (observed {<span class="symbol">|</span>yes<span class="symbol">=</span>()<span class="symbol">|</span>}))
+</div><div class="result-block">0.666667</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><p>And compare to proability of winning with no change.</p>
+</div></div><div class="cell"><div class="code-block">{<span class="symbol">|</span>yes<span class="symbol">=</span>()<span class="symbol">|</span>} <span class="symbol">??</span> (posterior <span class="symbol">$</span> monty_hall (observed {<span class="symbol">|</span>no<span class="symbol">=</span>()<span class="symbol">|</span>}))
+</div><div class="result-block">0.333333</div></div><div class="cell"><div class="code-block">
+
+
+</div></div><div class="cell"><div class="prose-block"><h2>Example 5: Hidden Markov Models</h2>
+</div></div><div class="cell"><div class="prose-block"><p>Finally we conclude with a more complex example. A hidden Markov model is
+one of the most widely used discrete time series models. It models the relationship between discrete hidden states $Z$ and emissions $X$.</p>
+</div></div><div class="cell"><div class="code-block"><span class="type-name">Z</span> <span class="symbol">=</span> <span class="type-name">Fin</span> 5
+</div></div><div class="cell"><div class="code-block"><span class="type-name">X</span> <span class="symbol">=</span> <span class="type-name">Fin</span> 10
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>It consists of three distributions: initial, transition, and emission.</p>
+</div></div><div class="cell"><div class="code-block">initial <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Z</span> nil <span class="symbol">=</span> arb <span class="symbol">$</span> newKey 1
+</div></div><div class="cell"><div class="code-block">emission <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">X</span> <span class="type-name">Z</span> <span class="symbol">=</span> arb <span class="symbol">$</span> newKey 2
+</div></div><div class="cell"><div class="code-block">transition <span class="symbol">:</span> <span class="type-name">Pr</span> <span class="type-name">Z</span> <span class="type-name">Z</span> <span class="symbol">=</span> arb <span class="symbol">$</span> newKey 3
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>The model itself takes the following form for $m$ steps.
+'
+$$ z_0 \sim \text{initial}$$
+$$ z_1 \sim \text{transition}(z_0)$$
+$$ x_1 \sim \text{emission}(z_1)$$
+$$ ...$$</p>
+</div></div><div class="cell"><div class="prose-block"><p>This is implemented in reverse order for clarity (backward algorithm).</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> hmm (init&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Z</span>) (x&#39;<span class="symbol">:</span> m <span class="symbol">=&gt;</span> <span class="type-name">Var</span> <span class="type-name">X</span>) (z&#39; <span class="symbol">:</span> m <span class="symbol">=&gt;</span> <span class="type-name">Var</span> <span class="type-name">Z</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    (init&#39; <span class="symbol">~</span> initial<span class="symbol">.</span>nil) <span class="symbol">$</span> yieldState one ( <span class="symbol">\</span>future <span class="symbol">.</span>
+        <span class="keyword">for</span> i<span class="command">:m</span><span class="symbol">.</span>
+            j <span class="symbol">=</span> ((size m) <span class="symbol">-</span> (ordinal i) <span class="symbol">-</span> 1)<span class="symbol">@</span>_
+            future <span class="symbol">:=</span> <span class="keyword">for</span> z<span class="symbol">.</span>
+                (x&#39;<span class="symbol">.</span>j <span class="symbol">~</span> emission<span class="symbol">.</span>z) (<span class="keyword">for</span> _<span class="symbol">.</span>
+                 (z&#39;<span class="symbol">.</span>j <span class="symbol">~</span> transition<span class="symbol">.</span>z) (get future)))
+</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><p>We can marginalize out over latents.</p>
+</div></div><div class="cell"><div class="code-block">hmm (observed (1<span class="symbol">@</span>_)) (<span class="keyword">for</span> i<span class="symbol">:</span>(<span class="type-name">Fin</span> 2)<span class="symbol">.</span> observed (1<span class="symbol">@</span>_)) (<span class="keyword">for</span> i<span class="symbol">.</span> latent)
+</div><div class="result-block">0.000285</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><p>Or we can compute the posterior probabilities of specific values.</p>
+</div></div><div class="cell"><div class="code-block">posteriorTab <span class="symbol">$</span> <span class="symbol">\</span>z <span class="symbol">.</span> hmm (observed (1<span class="symbol">@</span>_)) (<span class="keyword">for</span> i<span class="symbol">:</span>(<span class="type-name">Fin</span> 2)<span class="symbol">.</span> observed (1<span class="symbol">@</span>_)) z
+</div><div class="result-block">[ (AsDist [0.004153, 0.162454, 0.539687, 0.069191, 0.224516])
+, (AsDist [0.180291, 0.288983, 0.129116, 0.108978, 0.292633]) ]</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><h2>Example 5a. HMM Monoid</h2>
+</div></div><div class="cell"><div class="prose-block"><p>We can also write out an HMM using a Monoid. Here we define a monoid
+for square matrix multiplication.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> <span class="type-name">MarkovMonoid</span> (a<span class="symbol">:</span><span class="type-name">Type</span>) <span class="symbol">:</span> <span class="type-name">Monoid</span> (a <span class="symbol">=&gt;</span> a <span class="symbol">=&gt;</span> <span class="type-name">Float</span>) <span class="symbol">=</span>
+  <span class="type-name">M</span> <span class="symbol">=</span> a <span class="comment">-- XXX: Typing `Monoid a` below would quantify it over a, which we don&#39;t want
+</span>  named<span class="symbol">-</span><span class="keyword">instance</span> result <span class="symbol">:</span> <span class="type-name">Monoid</span> (<span class="type-name">M</span> <span class="symbol">=&gt;</span> <span class="type-name">M</span> <span class="symbol">=&gt;</span> <span class="type-name">Float</span>)
+     mempty <span class="symbol">=</span> <span class="keyword">for</span> m1 m2<span class="symbol">.</span> select ((ordinal m1) <span class="symbol">==</span> (ordinal m2)) 1<span class="symbol">.</span>0 0<span class="symbol">.</span>0
+     mcombine <span class="symbol">=</span> <span class="symbol">\</span>m1 m2<span class="symbol">.</span> <span class="keyword">for</span> i j<span class="symbol">.</span> sum <span class="keyword">for</span> k<span class="symbol">.</span> m1<span class="symbol">.</span>i<span class="symbol">.</span>k <span class="symbol">*</span> m2<span class="symbol">.</span>k<span class="symbol">.</span>j
+  result
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>We also define a Markov version of our sample function.
+Instead of summing out over the usage of its result,
+it constructs a matrix a vector.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> markov (lambda<span class="symbol">:</span><span class="type-name">Var</span> a) (pr<span class="symbol">:</span> <span class="type-name">Dist</span> a) <span class="symbol">:</span> a <span class="symbol">=&gt;</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    <span class="keyword">for</span> a&#39;<span class="symbol">.</span> (a&#39; <span class="symbol">??</span> pr) <span class="symbol">*</span> lambda<span class="symbol">.</span>a&#39;
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>Here we write out the HMM using a forward style approach.
+Each time through the algorithm the accumulator represents
+the matrix of the joint likelihood from position 1 to i.</p>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> hmm_monoid (init&#39;<span class="symbol">:</span> <span class="type-name">Var</span> <span class="type-name">Z</span>) (x&#39;<span class="symbol">:</span> m <span class="symbol">=&gt;</span> <span class="type-name">Var</span> <span class="type-name">X</span>) (z&#39; <span class="symbol">:</span> m <span class="symbol">=&gt;</span> <span class="type-name">Var</span> <span class="type-name">Z</span>) <span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span>
+    scores <span class="symbol">=</span> yieldAccum (<span class="type-name">MarkovMonoid</span> <span class="type-name">Z</span>) <span class="symbol">\</span>ref <span class="symbol">.</span>
+        <span class="keyword">for</span> i<span class="command">:m</span><span class="symbol">.</span>
+            ref <span class="symbol">+=</span> <span class="keyword">for</span> z<span class="symbol">:</span><span class="type-name">Z</span><span class="symbol">.</span>
+                emit <span class="symbol">=</span> (x&#39;<span class="symbol">.</span>i <span class="symbol">~</span> emission<span class="symbol">.</span>z) one
+                emit <span class="symbol">.*</span> (markov z&#39;<span class="symbol">.</span>i transition<span class="symbol">.</span>z)
+    (init&#39; <span class="symbol">~</span> initial<span class="symbol">.</span>nil) <span class="symbol">$</span> <span class="keyword">for</span> j<span class="symbol">.</span> sum scores<span class="symbol">.</span>j
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>At first glance, this seems much less efficient. Above we
+had an algorithm that only required $O(Z)$ storage whereas this
+requires $O(Z^2)$. In theory this approach can be parallelized
+over the intermediate size variable $m$.</p>
+</div></div><div class="cell"><div class="prose-block"><p>This should give the same result as before.</p>
+</div></div><div class="cell"><div class="code-block">hmm_monoid (observed (1<span class="symbol">@</span>_)) (<span class="keyword">for</span> i<span class="symbol">:</span>(<span class="type-name">Fin</span> 2)<span class="symbol">.</span> observed (1<span class="symbol">@</span>_)) (<span class="keyword">for</span> i<span class="symbol">.</span> latent)
+</div><div class="result-block">0.000285</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>Unfortunately though, the code for monoid's does not yet allow for
+auto-differentiation.</p>
+</div></div><div class="cell"><div class="code-block">posteriorTab <span class="symbol">$</span> <span class="symbol">\</span>z <span class="symbol">.</span> hmm (observed (1<span class="symbol">@</span>_)) (<span class="keyword">for</span> i<span class="symbol">:</span>(<span class="type-name">Fin</span> 2)<span class="symbol">.</span> observed (1<span class="symbol">@</span>_)) z
+</div><div class="result-block">[ (AsDist [0.004153, 0.162454, 0.539687, 0.069191, 0.224516])
+, (AsDist [0.180291, 0.288983, 0.129116, 0.108978, 0.292633]) ]</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><h2>Fancier Distributions</h2>
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> without_replacement (y<span class="symbol">:</span> n<span class="symbol">=&gt;</span>m) (<span class="type-name">AsDist</span> x<span class="symbol">:</span> <span class="type-name">Dist</span> m) <span class="symbol">:</span> <span class="type-name">Dist</span> m <span class="symbol">=</span>
+    renorm <span class="symbol">=</span> sum <span class="keyword">for</span> n&#39;<span class="symbol">.</span> x<span class="symbol">.</span>(y<span class="symbol">.</span>n&#39;)
+    <span class="type-name">AsDist</span> <span class="symbol">$</span> <span class="keyword">for</span> m&#39;<span class="symbol">.</span>
+           <span class="keyword">case</span> (any <span class="keyword">for</span> n&#39;<span class="symbol">.</span> (ordinal (y<span class="symbol">.</span>n&#39;)) <span class="symbol">==</span> (ordinal m&#39;)) <span class="keyword">of</span>
+                <span class="type-name">False</span> <span class="symbol">-&gt;</span> (x<span class="symbol">.</span>m&#39; <span class="symbol">/</span> (1<span class="symbol">.</span>0 <span class="symbol">-</span> renorm))
+                <span class="type-name">True</span> <span class="symbol">-&gt;</span> 0<span class="symbol">.</span>0
+</div></div><div class="cell"><div class="code-block">                
+</div></div><div class="cell"><div class="code-block">
+
+</div></div><div class="cell"><div class="prose-block"><h3>Probability Exercises (from Stat 110 textbook)</h3>
+</div></div><div class="cell"><div class="prose-block"><p>A college has 10 (non-overlapping) time slots for its 10 courses, and blithely assigns
+courses to time slots randomly and independently. A student randomly chooses 3 of the
+courses to enroll in. What is the probability that there is a conflict in the student’s
+schedule?</p>
+</div></div><div class="cell"><div class="code-block"><span class="type-name">Slot</span> <span class="symbol">=</span> <span class="type-name">Fin</span> 10
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> courses (conflict<span class="symbol">:</span><span class="type-name">Var</span> <span class="type-name">YesNo</span>)<span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span> 
+    (one <span class="symbol">~</span> uniform) (<span class="keyword">for</span> (i<span class="symbol">,</span>j<span class="symbol">,</span>k)<span class="symbol">:</span>(<span class="type-name">Slot</span><span class="symbol">&amp;</span> <span class="type-name">Slot</span><span class="symbol">&amp;</span> <span class="type-name">Slot</span>)<span class="symbol">.</span>
+          (conflict <span class="symbol">~</span> yesno ((i <span class="symbol">==</span> j) <span class="symbol">||</span> (j <span class="symbol">==</span> k) <span class="symbol">||</span> (i <span class="symbol">==</span> k))) one)
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">courses (observed {<span class="symbol">|</span>yes<span class="symbol">=</span>()<span class="symbol">|</span>})
+</div><div class="result-block">0.28</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="prose-block"><p>A certain family has 6 children, consisting of 3 boys and 3 girls. Assuming that all
+birth orders are equally likely, what is the probability that the 3 eldest children are the
+3 girls.</p>
+</div></div><div class="cell"><div class="code-block"><span class="type-name">Children</span> <span class="symbol">=</span> <span class="type-name">Fin</span> 6
+</div></div><div class="cell"><div class="code-block"><span class="keyword">def</span> birth (event<span class="symbol">:</span><span class="type-name">Var</span> <span class="type-name">YesNo</span>)<span class="symbol">:</span> <span class="type-name">Float</span> <span class="symbol">=</span> 
+    (one <span class="symbol">~</span> uniform) (<span class="keyword">for</span> i<span class="symbol">:</span><span class="type-name">Children</span><span class="symbol">.</span>
+        (one <span class="symbol">~</span> without_replacement [i] uniform) (<span class="keyword">for</span> j<span class="symbol">:</span><span class="type-name">Children</span><span class="symbol">.</span>
+            (one <span class="symbol">~</span> without_replacement [i<span class="symbol">,</span> j] uniform) (<span class="keyword">for</span> k<span class="symbol">:</span><span class="type-name">Children</span><span class="symbol">.</span>
+               (event <span class="symbol">~</span> yesno ((ordinal i <span class="symbol">&lt;</span> 3) <span class="symbol">&amp;&amp;</span> (ordinal j <span class="symbol">&lt;</span> 3) <span class="symbol">&amp;&amp;</span> (ordinal k <span class="symbol">&lt;</span> 3))) one)))
+</div></div><div class="cell"><div class="code-block">
+</div></div><div class="cell"><div class="code-block">birth (observed {<span class="symbol">|</span>yes<span class="symbol">=</span>()<span class="symbol">|</span>})
+</div><div class="result-block">0.05</div></div><div class="cell"><div class="code-block">
+
+</div></div></div>
+        </section>
+
+        <br><br><br>
+
+        <footer>
+          <div class="adjust-width">
+            <div id="author-block" class="w3-light-grey w3-border">
+              <div id="author-info">
+                <a href="http://rush-nlp.com"><img class="avatar" src="https://avatars0.githubusercontent.com/u/35882?s=460&v=4" onerror="this.src='theme/images/avatar.png'" alt="Avatar"></a>
+                <div style="margin-left: 20px;">
+                  <a href="http://rush-nlp.com"><span id="author-name" class="w3-hover-text-dark-grey">Sasha Rush</span></a>
+                  <p id="author-story">Sasha Rush. Professor at Cornell Tech and researcher at Hugging Face. This blog collects some of my sporadic literate coding projects. All notebooks are available at https://github.com/srush/blog/</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <br><br><br>
+
+          <p style="font-size:10pt; font-style: italic;">Did you like this article? Share it with your friends!</p>
+          <div id="share" class="share">
+            <a href="https://www.facebook.com/sharer.php?u=https%3A//blog.rush-nlp.com/dex-differential-probabilistic-inference.html&amp;t=Sasha%20Rush%3A%20Dex%3A%20Differential%20Probabilistic%20Inference" target="_blank" class="w3-btn w3-indigo">
+              <i class="fa fa-facebook"></i> <span>Facebook</span>
+            </a>
+            <a href="https://twitter.com/share?url=https%3A//blog.rush-nlp.com/dex-differential-probabilistic-inference.html&amp;text=Sasha%20Rush%3A%20Dex%3A%20Differential%20Probabilistic%20Inference" target="_blank" class="w3-btn w3-blue">
+              <i class="fa fa-twitter"></i> <span>Twitter</span>
+            </a>
+          </div>
+
+          <br><br><br>
+
+
+          <div id="disqus_thread"></div>
+          <script>
+            /**
+             *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+             *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables
+             */
+            
+            var disqus_config = function () {
+              this.page.url = 'https://blog.rush-nlp.com/dex-differential-probabilistic-inference.html';  // Replace PAGE_URL with your page's canonical URL variable
+              this.page.identifier = 'https://blog.rush-nlp.com/dex-differential-probabilistic-inference.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+            };
+            
+            (function() {  // REQUIRED CONFIGURATION VARIABLE: EDIT THE SHORTNAME BELOW
+              var d = document, s = d.createElement('script');
+              
+              s.src = 'https://blog-rush-nlp-com.disqus.com/embed.js';  // IMPORTANT: Replace EXAMPLE with your forum shortname!
+              
+              s.setAttribute('data-timestamp', +new Date());
+              (d.head || d.body).appendChild(s);
+            })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+          <br><br><br>
+
+        </footer>
+      </div>
+    </article>
+
+
+    <footer id="footer">
+      <div id="footer-copyright" class="w3-center w3-small w3-text-grey w3-padding-48">
+        <span>
+          &copy;
+          2020          Sasha Rush
+        </span>
+      </div>
+    </footer>
+
+    <!-- Google Analytics -->
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-12345678-9', 'auto');
+      ga('send', 'pageview');
+    </script>
+
+  </body>
+</html>
