@@ -307,6 +307,7 @@ render(RENDER_MODE.STATIC);"></script>
     {% if MINIMALXY_FAVICON %}
     <link rel="shortcut icon" type="image/x-icon" href="{{ SITEURL }}/{{ MINIMALXY_FAVICON }}">
     {% endif %}
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
     <!-- JavaScript -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
@@ -315,32 +316,51 @@ render(RENDER_MODE.STATIC);"></script>
 
   <body>
     <div class="w3-row w3-card w3-white">
-      <header id="header">
-        {% if " " in AUTHOR %}
-        <a href="{{ SITEURL }}" id="header-logo" title="Home">{{ AUTHOR[0] + AUTHOR[AUTHOR.index(" ")+1] }}</a>
-        {% else %}
-        <a href="{{ SITEURL }}" id="header-logo" title="Home">{{ AUTHOR[0] }}</a>
-        {% endif %}
-        <nav id="header-menu">
-          <ul>
-            {% if DISPLAY_PAGES_ON_MENU %}
-n            {% for p in pages %}
-            <li class="w3-bottombar w3-border-white w3-hover-border-green{% if p==page %} active{% endif %}"><a href="{{ SITEURL }}/{{ p.url }}">{{ p.title }}</a></li>
-            {% endfor %}
-            {% endif %}
-            {% if DISPLAY_CATEGORIES_ON_MENU %}
-            {% for cat, null in categories %}
-            {% if cat != DEFAULT_CATEGORY %}
-            <li class="w3-bottombar w3-border-white w3-hover-border-green" {% if cat == category %}style="font-weight: bold;"{% endif %}><a href="{{ SITEURL }}/{{ cat.url }}">{{ cat }}</a></li>
-            {% endif %}
-            {% endfor %}
-            {% endif %}
-            {% for title, link in MENUITEMS %}
-            <li class="w3-bottombar w3-border-white w3-hover-border-green"><a href="{{ link }}">{{ title }}</a></li>
-            {% endfor %}
-          </ul>
-        </nav>
-      </header>
+          <header class="site-header">
+
+  <div class="wrapper">
+
+    <span><img width="50px" style="padding:5px" src="http://rush-nlp.com/images/cornell.png"></span>
+
+    <span>
+        <!-- <a class="site-title" href="/"></a> -->
+
+    </span>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+       
+         <a class="page-link" href="http://rush-nlp.com/">Main</a>
+          
+          
+          
+          <a class="page-link" href="http://rush-nlp.com/members/">Group</a>
+          
+          
+          
+          <a class="page-link" href="http://rush-nlp.com/projects/">Projects</a>
+          
+          
+          
+          <a class="page-link" href="http://rush-nlp.com/papers/">Publications</a>
+          
+          
+        <a class="page-link" href="http://blog.rush-nlp.com">Blog</a>
+      </div>
+    </nav>
+
+  </div>
+
+</header>
     </div>
 
     {% block content_title %}

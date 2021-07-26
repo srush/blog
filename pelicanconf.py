@@ -11,7 +11,7 @@ IGNORE_FILES = [".ipynb_checkpoints"]
 
 AUTHOR = 'Sasha Rush'
 SITENAME = 'Sasha Rush'
-SITEURL = 'https://blog.rush-nlp.com'
+SITEURL = 'https://blog.rush-nlp.com/'
 
 PATH = 'content'
 
